@@ -93,6 +93,41 @@ npm run build
 npm start
 ```
 
+## Deploying to Vercel
+
+1. **Push repo to GitHub** and import the project in the [Vercel dashboard](https://vercel.com/new).
+2. **Provision a Vercel Postgres database** from the Vercel dashboard (Storage tab) and connect it
+   to your project. Vercel will inject `DATABASE_URL` (and related `POSTGRES_*` vars) automatically.
+3. **Provision Vercel Blob storage** from the Vercel dashboard (Storage tab) and connect it.
+   Vercel will inject `BLOB_READ_WRITE_TOKEN` automatically.
+4. **Add your LLM key** as an environment variable:
+   - `ANTHROPIC_API_KEY` (preferred) or `OPENAI_API_KEY`
+5. **Run the database migration** once after provisioning Postgres:
+   ```bash
+   DATABASE_URL=<your-connection-string> npm run migrate
+   ```
+   Or run it from the Vercel dashboard (Project → Settings → Environment Variables → Functions).
+6. **Deploy** — Vercel will run `npm run build` automatically on push.
+
+### Environment variables reference
+
+See `.env.example` for all variables. For local development, none are required (SQLite + local
+filesystem are the defaults). For production Vercel deployment, set:
+
+| Variable | Purpose | Required for Vercel? |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | Real LLM generation (Anthropic) | Either this or OpenAI |
+| `OPENAI_API_KEY` | Real LLM generation (OpenAI) | Either this or Anthropic |
+| `DATABASE_URL` | PostgreSQL connection string | Yes — provision via Vercel Postgres |
+| `BLOB_READ_WRITE_TOKEN` | Vercel Blob upload token | Yes — provision via Vercel Blob |
+| `NEXT_PUBLIC_APP_URL` | Public app URL | Optional |
+
+**How the storage adapters work**: When `DATABASE_URL` is set, `lib/db.ts` uses the Postgres
+adapter (`lib/db-pg.ts`). When not set, it uses the local SQLite database. When
+`BLOB_READ_WRITE_TOKEN` is set, file uploads are stored in Vercel Blob. When not set, files
+are stored locally under `./data/uploads/`. Text extraction always happens at upload time, so
+the parsing code never needs to re-read the file after the initial ingest.
+
 ## Acceptance-Criteria Walkthrough
 
 1. **Create a project** — go to `/`, fill in project name, prospect/brand name, category, pitch
@@ -160,16 +195,19 @@ Vault UI, and Markdown/JSON exports.
 
 ## Phase 2 Status
 
-Implemented: measurement maturity scoring (1-5 rubric), Q&A prep engine, CSV export of findings.
+All Phase 2 items are now implemented:
 
-Deferred (cut for time, in order of what was cut first): the 4 C's / Comms Compass / SOAP module
-(prompt file exists at `prompts/four_cs.md` and `prompts/comms_compass.md` but no wired
-generation module/route — straightforward to add following the existing module pattern), the
-pitch critique/QC engine (prompt file exists at `prompts/pitch_critique.md`, not wired up),
-screenshot manual-tagging UI (screenshots are ingested and create a placeholder evidence row
-flagging them for manual tagging, but there's no dedicated tagging form yet), and a dedicated
-30/60/90 roadmap UI view (the roadmap data is computed and saved by the recommendations module
-and included in the Markdown export, but doesn't have its own dashboard page yet).
-
-These were cut to prioritize a fully working, tested MVP pipeline (project → upload → classify →
-extract → evidence → generate → view → export) over breadth of Phase 2 features.
+- **Measurement maturity scoring** (1-5 rubric): implemented and wired into the pipeline.
+- **Q&A Prep engine**: implemented with category grouping UI.
+- **CSV export of findings**: implemented for audit findings and roadmap items.
+- **4 C's + Comms Compass + SOAP module**: `lib/modules/fourCs.ts`, wired at
+  `POST /api/projects/[id]/generate/four-cs`, displayed in the Analysis Dashboard.
+- **Pitch critique/QC engine**: `lib/modules/pitchCritique.ts`, wired at
+  `POST /api/projects/[id]/generate/critique`, displayed in the Analysis Dashboard with
+  per-dimension scores (1-10) and actionable verdict.
+- **Screenshot manual-tagging UI**: inline form in the Inputs tab for files classified as
+  screenshots (image ext or `source_type === "screenshot"`). Tags saved to the `image_tags`
+  column on `uploaded_files` and displayed inline in the file list.
+- **30/60/90 Roadmap page**: dedicated `/projects/[id]/roadmap` page with phase grouping,
+  per-item complexity/owner/KPI/dependency display, and "Export CSV" button linking to
+  `/api/projects/[id]/export/roadmap-csv`.

@@ -10,6 +10,8 @@ import { generateWinStrategy } from "./modules/winStrategy";
 import { generateRecommendations } from "./modules/recommendations";
 import { generateSlides, generateTalkTracks } from "./modules/slideArchitect";
 import { generateQAPrep } from "./modules/qaPrep";
+import { generateFourCs } from "./modules/fourCs";
+import { generatePitchCritique } from "./modules/pitchCritique";
 
 export async function runFullPipeline(projectId: string): Promise<void> {
   try {
@@ -48,6 +50,12 @@ export async function runFullPipeline(projectId: string): Promise<void> {
 
     setGenerationStatus(projectId, "running", "qa_prep");
     await generateQAPrep(projectId);
+
+    setGenerationStatus(projectId, "running", "four_cs");
+    await generateFourCs(projectId);
+
+    setGenerationStatus(projectId, "running", "critique");
+    await generatePitchCritique(projectId);
 
     setGenerationStatus(projectId, "done", "complete");
   } catch (err) {

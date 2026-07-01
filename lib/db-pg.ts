@@ -1,21 +1,23 @@
-import Database from "better-sqlite3";
-import fs from "fs";
-import path from "path";
+/**
+ * PostgreSQL adapter for production (Vercel) deployment.
+ * Used automatically when DATABASE_URL env var is set.
+ * Schema mirrors the SQLite tables in lib/db.ts.
+ */
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const DB_PATH = path.join(DATA_DIR, "db.sqlite");
+import { Pool } from "pg";
 
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+let _pool: Pool | null = null;
+
+export function getPgPool(): Pool {
+  if (_pool) return _pool;
+  _pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  return _pool;
 }
 
-let _db: Database.Database | null = null;
-
-export function getDb(): Database.Database {
-  if (_db) return _db;
-  const db = new Database(DB_PATH);
-  db.pragma("journal_mode = WAL");
-  db.exec(`
+/** Run all CREATE TABLE IF NOT EXISTS statements against Postgres. */
+export async function migratePg(): Promise<void> {
+  const pool = getPgPool();
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS projects (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -36,25 +38,24 @@ export function getDb(): Database.Database {
 
     CREATE TABLE IF NOT EXISTS uploaded_files (
       id TEXT PRIMARY KEY,
-      project_id TEXT NOT NULL,
+      project_id TEXT NOT NULL REFERENCES projects(id),
       original_name TEXT NOT NULL,
       stored_path TEXT NOT NULL,
       ext TEXT NOT NULL,
-      size_bytes INTEGER NOT NULL,
+      size_bytes BIGINT NOT NULL,
       source_type TEXT NOT NULL DEFAULT 'unknown',
       source_type_user_override INTEGER NOT NULL DEFAULT 0,
       detected_metadata TEXT,
       extracted_text TEXT,
-      image_tags TEXT,
+      image_tags JSONB,
       extraction_status TEXT NOT NULL DEFAULT 'pending',
       extraction_error TEXT,
-      created_at TEXT NOT NULL,
-      FOREIGN KEY (project_id) REFERENCES projects(id)
+      created_at TEXT NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS evidence (
       id TEXT PRIMARY KEY,
-      project_id TEXT NOT NULL,
+      project_id TEXT NOT NULL REFERENCES projects(id),
       source_file TEXT NOT NULL,
       source_type TEXT NOT NULL,
       page_or_sheet TEXT,
@@ -65,29 +66,34 @@ export function getDb(): Database.Database {
       date_range TEXT,
       confidence TEXT NOT NULL DEFAULT 'Medium',
       tags TEXT NOT NULL DEFAULT '',
-      created_at TEXT NOT NULL,
-      FOREIGN KEY (project_id) REFERENCES projects(id)
+      created_at TEXT NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS generated_artifacts (
       id TEXT PRIMARY KEY,
-      project_id TEXT NOT NULL,
+      project_id TEXT NOT NULL REFERENCES projects(id),
       module TEXT NOT NULL,
       content_json TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      FOREIGN KEY (project_id) REFERENCES projects(id)
+      created_at TEXT NOT NULL
     );
 
     CREATE INDEX IF NOT EXISTS idx_files_project ON uploaded_files(project_id);
     CREATE INDEX IF NOT EXISTS idx_evidence_project ON evidence(project_id);
     CREATE INDEX IF NOT EXISTS idx_artifacts_project_module ON generated_artifacts(project_id, module);
   `);
-  _db = db;
-  return db;
 }
 
-export function uploadsDir(projectId: string): string {
-  const dir = path.join(DATA_DIR, "uploads", projectId);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  return dir;
+/** Thin synchronous-style wrapper — all Pg calls go through this pool directly. */
+export async function pgQuery<T = Record<string, unknown>>(
+  sql: string,
+  params?: unknown[]
+): Promise<T[]> {
+  const pool = getPgPool();
+  const res = await pool.query(sql, params);
+  return res.rows as T[];
+}
+
+export async function pgRun(sql: string, params?: unknown[]): Promise<void> {
+  const pool = getPgPool();
+  await pool.query(sql, params);
 }

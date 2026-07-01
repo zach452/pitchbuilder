@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getProject, listFilesForProject } from "@/lib/projects";
-import { ingestFile, updateFileSourceType } from "@/lib/ingest";
-import { SourceType } from "@/lib/types";
+import { ingestFile, updateFileSourceType, updateFileImageTags } from "@/lib/ingest";
+import { ImageTags, SourceType } from "@/lib/types";
 
 export async function GET(
   _req: NextRequest,
@@ -45,6 +45,10 @@ export async function PATCH(
   if (!body.file_id || !body.source_type) {
     return NextResponse.json({ error: "file_id and source_type required" }, { status: 400 });
   }
-  updateFileSourceType(body.file_id, body.source_type as SourceType);
+  if (body.image_tags) {
+    updateFileImageTags(body.file_id, body.image_tags as ImageTags);
+  } else {
+    updateFileSourceType(body.file_id, body.source_type as SourceType);
+  }
   return NextResponse.json({ ok: true });
 }

@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import fs from "fs";
 import path from "path";
 import { getDb, uploadsDir } from "./db";
+import { put as blobPut } from "@vercel/blob";
 import { classifyFile } from "./classify";
 import { parseText } from "./parsers/text";
 import { parsePdf } from "./parsers/pdf";
@@ -23,10 +24,21 @@ export async function ingestFile(
   const db = getDb();
   const id = randomUUID();
   const ext = path.extname(originalName).toLowerCase();
-  const dir = uploadsDir(projectId);
-  const storedName = `${id}${ext}`;
-  const storedPath = path.join(dir, storedName);
-  fs.writeFileSync(storedPath, buffer);
+  let storedPath: string;
+
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
+    // Vercel Blob: upload at upload-time; store the blob URL as stored_path
+    const blob = await blobPut(`uploads/${projectId}/${id}${ext}`, buffer, {
+      access: "public",
+    });
+    storedPath = blob.url;
+  } else {
+    // Local filesystem fallback
+    const dir = uploadsDir(projectId);
+    const storedName = `${id}${ext}`;
+    storedPath = path.join(dir, storedName);
+    fs.writeFileSync(storedPath, buffer);
+  }
 
   const now = new Date().toISOString();
 
@@ -148,14 +160,15 @@ export async function ingestFile(
     source_type_user_override: 0,
     detected_metadata: JSON.stringify(metadata),
     extracted_text: extractedText || null,
+    image_tags: null,
     extraction_status: extractionStatus,
     extraction_error: extractionError,
     created_at: now,
   };
 
   db.prepare(
-    `INSERT INTO uploaded_files (id, project_id, original_name, stored_path, ext, size_bytes, source_type, source_type_user_override, detected_metadata, extracted_text, extraction_status, extraction_error, created_at)
-     VALUES (@id, @project_id, @original_name, @stored_path, @ext, @size_bytes, @source_type, @source_type_user_override, @detected_metadata, @extracted_text, @extraction_status, @extraction_error, @created_at)`
+    `INSERT INTO uploaded_files (id, project_id, original_name, stored_path, ext, size_bytes, source_type, source_type_user_override, detected_metadata, extracted_text, image_tags, extraction_status, extraction_error, created_at)
+     VALUES (@id, @project_id, @original_name, @stored_path, @ext, @size_bytes, @source_type, @source_type_user_override, @detected_metadata, @extracted_text, @image_tags, @extraction_status, @extraction_error, @created_at)`
   ).run(fileRow);
 
   return fileRow;
@@ -166,4 +179,11 @@ export function updateFileSourceType(fileId: string, sourceType: SourceType): vo
   db.prepare(
     `UPDATE uploaded_files SET source_type = ?, source_type_user_override = 1 WHERE id = ?`
   ).run(sourceType, fileId);
+}
+
+export function updateFileImageTags(fileId: string, tags: import("./types").ImageTags): void {
+  const db = getDb();
+  db.prepare(
+    `UPDATE uploaded_files SET image_tags = ? WHERE id = ?`
+  ).run(JSON.stringify(tags), fileId);
 }

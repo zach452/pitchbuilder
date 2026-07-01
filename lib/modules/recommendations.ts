@@ -16,11 +16,17 @@ export async function generateRecommendations(
   const raw = await callLLM(system, user, { jsonMode: true, maxTokens: 2000 });
   const recommendations = extractJson<Recommendation[]>(raw);
 
-  const roadmap: RoadmapItem[] = ["30", "60", "90"].map((phase) => ({
-    phase: phase as "30" | "60" | "90",
-    items: recommendations
-      .filter((r) => r.timeframe === phase)
-      .map((r) => r.title),
+  // Build richer RoadmapItem objects from recommendations
+  const roadmap: RoadmapItem[] = recommendations.map((r) => ({
+    phase: r.timeframe as "30" | "60" | "90",
+    recommendation: r.title,
+    why_it_matters: r.rationale,
+    business_impact: "Directional inference — validate with client data",
+    complexity: r.priority_score >= 75 ? "Low" : r.priority_score >= 50 ? "Medium" : "High",
+    timing: `Within ${r.timeframe} days`,
+    owner: "Shared",
+    kpi: "TBD — align in kickoff",
+    dependencies: "None identified",
   }));
 
   saveArtifact(projectId, "recommendations", { recommendations, roadmap });

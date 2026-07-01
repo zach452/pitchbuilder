@@ -49,6 +49,18 @@ export interface Project {
   updated_at: string;
 }
 
+export interface ImageTags {
+  format: string; // image/video/carousel/story/reel/display
+  creative_type: string; // UGC/branded/product_demo/testimonial/static/motion/other
+  hook: string;
+  product_shown: boolean;
+  product_description: string;
+  cta: string;
+  offer: string;
+  funnel_role: string; // TOF/MOF/BOF
+  notes: string;
+}
+
 export interface UploadedFile {
   id: string;
   project_id: string;
@@ -60,6 +72,7 @@ export interface UploadedFile {
   source_type_user_override: number; // 0/1
   detected_metadata: string | null; // JSON string
   extracted_text: string | null;
+  image_tags: string | null; // JSON-serialized ImageTags
   extraction_status: "pending" | "done" | "error";
   extraction_error: string | null;
   created_at: string;
@@ -221,9 +234,84 @@ export interface Recommendation {
   source_evidence_ids: string[];
 }
 
+export interface CommsCompass {
+  current_perception: string;
+  desired_perception: string;
+  core_tension: string;
+  strategic_opportunity: string;
+  messaging_north_star: string;
+  proof_points: string[];
+  paid_implications: string;
+  creative_implications: string;
+  funnel_implications: string;
+}
+
+export interface SoapStatement {
+  brand_is: string;
+  problem_is: string;
+  however: string;
+  we_need_to: string;
+  so_that: string;
+  helping_to: string;
+}
+
+export interface FourCsAnalysis {
+  category: string;
+  culture: string;
+  consumer: {
+    must_win_audience: string;
+    motivations: string[];
+    objections: string[];
+    jtbd: string;
+  };
+  company: {
+    what_they_own: string;
+    credibility: string;
+    gaps: string[];
+  };
+  comms_compass: CommsCompass;
+  soap: SoapStatement;
+  source_evidence_ids: string[];
+}
+
+export interface PitchCritiqueScore {
+  strategic_sharpness: number;
+  rfp_alignment: number;
+  business_diagnosis_strength: number;
+  evidence_quality: number;
+  audit_usefulness: number;
+  measurement_credibility: number;
+  differentiation: number;
+  slide_clarity: number;
+  talk_track_quality: number;
+  risk_handling: number;
+  overall_win_probability: number;
+}
+
+export interface PitchCritique {
+  scores: PitchCritiqueScore;
+  overall_score: number; // average of all score fields
+  what_is_strong: string[];
+  what_is_generic: string[];
+  what_is_missing: string[];
+  needs_more_proof: string[];
+  to_be_more_senior: string[];
+  what_to_cut: string[];
+  push_harder: string[];
+  verdict: string;
+  source_evidence_ids: string[];
+}
+
 export interface RoadmapItem {
-  phase: "30" | "60" | "90";
-  items: string[];
+  phase: "30" | "60" | "90" | "q2+";
+  recommendation: string;
+  why_it_matters: string;
+  business_impact: string;
+  complexity: "Low" | "Medium" | "High";
+  timing: string;
+  owner: "Agency" | "Client" | "Shared";
+  kpi: string;
+  dependencies: string;
 }
 
 export interface PitchPackage {
@@ -240,4 +328,6 @@ export interface PitchPackage {
   slides?: Slide[];
   talk_tracks?: TalkTrack[];
   qa_items?: QAItem[];
+  four_cs?: FourCsAnalysis;
+  critique?: PitchCritique;
 }

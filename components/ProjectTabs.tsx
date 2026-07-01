@@ -13,6 +13,7 @@ export default function ProjectTabs({ projectId }: { projectId: string }) {
     { href: `/projects/${projectId}/slides`, label: "Slide Builder" },
     { href: `/projects/${projectId}/evidence`, label: "Evidence Vault" },
     { href: `/projects/${projectId}/qa`, label: "Q&A Prep" },
+    { href: `/projects/${projectId}/roadmap`, label: "Roadmap" },
   ];
 
   return (
