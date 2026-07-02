@@ -18,7 +18,12 @@ export async function POST(
 ) {
   const { id } = await params;
   const project = await getProject(id);
-  if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  if (!project) {
+    const hint = process.env.DATABASE_URL
+      ? "Project not found in database."
+      : "Project not found. On Vercel, each serverless function runs in an isolated container — data written to /tmp does not persist across requests. Please provision Vercel Postgres and set DATABASE_URL, then redeploy.";
+    return NextResponse.json({ error: hint }, { status: 404 });
+  }
 
   const formData = await req.formData();
   const files = formData.getAll("files") as File[];

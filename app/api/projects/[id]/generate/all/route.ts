@@ -8,7 +8,7 @@ export async function POST(
 ) {
   const { id } = await params;
   const project = await getProject(id);
-  if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  if (!project) return NextResponse.json({ error: process.env.DATABASE_URL ? "Project not found." : "Project not found — set DATABASE_URL (Vercel Postgres) so data persists across serverless requests." }, { status: 404 });
 
   await setGenerationStatus(id, "running", "starting");
   runFullPipeline(id).catch(() => {
@@ -24,7 +24,7 @@ export async function GET(
 ) {
   const { id } = await params;
   const project = await getProject(id);
-  if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  if (!project) return NextResponse.json({ error: process.env.DATABASE_URL ? "Project not found." : "Project not found — set DATABASE_URL (Vercel Postgres) so data persists across serverless requests." }, { status: 404 });
   return NextResponse.json({
     generation_status: project.generation_status,
     generation_step: project.generation_step,
