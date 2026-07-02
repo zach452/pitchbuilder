@@ -36,10 +36,7 @@ export async function POST(
   return NextResponse.json({ files: results }, { status: 201 });
 }
 
-export async function PATCH(
-  req: NextRequest,
-  { params: _params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(req: NextRequest) {
   const body = await req.json();
   if (!body.file_id) {
     return NextResponse.json({ error: "file_id required" }, { status: 400 });
