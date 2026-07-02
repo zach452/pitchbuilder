@@ -118,7 +118,13 @@ function makeSqliteAdapter(): DbAdapter {
 function makePgAdapter(): DbAdapter {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { Pool } = require("pg");
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
+    max: 1, // keep connection count low in serverless
+    idleTimeoutMillis: 10000,
+    connectionTimeoutMillis: 10000,
+  });
 
   return {
     async query<T>(sql: string, params: unknown[] = []) {
