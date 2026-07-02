@@ -34,19 +34,31 @@ export default function NewProjectForm() {
       known_business_goals: data.get("known_business_goals"),
       notes: data.get("notes"),
     };
-    const res = await fetch("/api/projects", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    setSubmitting(false);
-    if (!res.ok) {
+    try {
+      const res = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        let msg = `Server error ${res.status}`;
+        try {
+          const json = await res.json();
+          msg = json.error ?? msg;
+        } catch {
+          // response body not JSON — use status text
+          msg = res.statusText || msg;
+        }
+        setError(msg);
+        return;
+      }
       const json = await res.json();
-      setError(json.error ?? "Failed to create project");
-      return;
+      router.push(`/projects/${json.project.id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Network error — could not reach the server");
+    } finally {
+      setSubmitting(false);
     }
-    const json = await res.json();
-    router.push(`/projects/${json.project.id}`);
   }
 
   return (
