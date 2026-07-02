@@ -120,7 +120,7 @@ filesystem are the defaults). For production Vercel deployment, set:
 | `OPENAI_API_KEY` | Real LLM generation (OpenAI) | Either this or Anthropic |
 | `DATABASE_URL` | PostgreSQL connection string | Yes — provision via Vercel Postgres |
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob upload token | Yes — provision via Vercel Blob |
-| `NEXT_PUBLIC_APP_URL` | Public app URL | Optional |
+| `NEXT_PUBLIC_APP_URL` | Public app URL (e.g. `https://your-project.vercel.app`) | Optional — add directly in Vercel dashboard, do **not** use a secret reference |
 
 **How the storage adapters work**: When `DATABASE_URL` is set, `lib/db.ts` uses the Postgres
 adapter (`lib/db-pg.ts`). When not set, it uses the local SQLite database. When
