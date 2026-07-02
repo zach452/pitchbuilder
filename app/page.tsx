@@ -2,8 +2,8 @@ import Link from "next/link";
 import { listProjects } from "@/lib/projects";
 import NewProjectForm from "@/components/NewProjectForm";
 
-export default function HomePage() {
-  const projects = listProjects();
+export default async function HomePage() {
+  const projects = await listProjects();
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-10 space-y-10">
@@ -36,10 +36,7 @@ export default function HomePage() {
                     {p.prospect_name} &middot; {p.pitch_stage} &middot; status: {p.generation_status}
                   </div>
                 </div>
-                <Link
-                  href={`/projects/${p.id}`}
-                  className="text-sm text-blue-600 hover:underline"
-                >
+                <Link href={`/projects/${p.id}`} className="text-sm text-blue-600 hover:underline">
                   Open &rarr;
                 </Link>
               </li>

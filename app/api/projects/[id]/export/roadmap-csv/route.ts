@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const artifacts = getAllArtifacts(id);
+  const artifacts = await getAllArtifacts(id);
   const rec = artifacts.recommendations as
     | { recommendations: unknown[]; roadmap: RoadmapItem[] }
     | undefined;

@@ -15,54 +15,52 @@ import { generatePitchCritique } from "./modules/pitchCritique";
 
 export async function runFullPipeline(projectId: string): Promise<void> {
   try {
-    setGenerationStatus(projectId, "running", "rfp_summary");
+    await setGenerationStatus(projectId, "running", "rfp_summary");
     await generateRfpSummary(projectId);
 
-    setGenerationStatus(projectId, "running", "transcript_summary");
+    await setGenerationStatus(projectId, "running", "transcript_summary");
     await generateTranscriptSummary(projectId);
 
-    setGenerationStatus(projectId, "running", "paid_media_audit");
+    await setGenerationStatus(projectId, "running", "paid_media_audit");
     await generatePaidMediaAudit(projectId);
 
-    setGenerationStatus(projectId, "running", "creative_audit");
+    await setGenerationStatus(projectId, "running", "creative_audit");
     await generateCreativeAudit(projectId);
 
-    setGenerationStatus(projectId, "running", "shopify_analysis");
+    await setGenerationStatus(projectId, "running", "shopify_analysis");
     await generateShopifyAnalysis(projectId);
 
-    setGenerationStatus(projectId, "running", "business_diagnosis");
+    await setGenerationStatus(projectId, "running", "business_diagnosis");
     await generateBusinessDiagnosis(projectId);
 
-    setGenerationStatus(projectId, "running", "measurement_maturity");
+    await setGenerationStatus(projectId, "running", "measurement_maturity");
     await generateMeasurementMaturity(projectId);
 
-    setGenerationStatus(projectId, "running", "win_strategy");
+    await setGenerationStatus(projectId, "running", "win_strategy");
     await generateWinStrategy(projectId);
 
-    setGenerationStatus(projectId, "running", "recommendations");
+    await setGenerationStatus(projectId, "running", "recommendations");
     await generateRecommendations(projectId);
 
-    setGenerationStatus(projectId, "running", "slides");
+    await setGenerationStatus(projectId, "running", "slides");
     const slides = await generateSlides(projectId);
 
-    setGenerationStatus(projectId, "running", "talk_tracks");
+    await setGenerationStatus(projectId, "running", "talk_tracks");
     await generateTalkTracks(projectId, slides);
 
-    setGenerationStatus(projectId, "running", "qa_prep");
+    await setGenerationStatus(projectId, "running", "qa_prep");
     await generateQAPrep(projectId);
 
-    setGenerationStatus(projectId, "running", "four_cs");
+    await setGenerationStatus(projectId, "running", "four_cs");
     await generateFourCs(projectId);
 
-    setGenerationStatus(projectId, "running", "critique");
+    await setGenerationStatus(projectId, "running", "critique");
     await generatePitchCritique(projectId);
 
-    setGenerationStatus(projectId, "done", "complete");
+    await setGenerationStatus(projectId, "done", "complete");
   } catch (err) {
-    setGenerationStatus(
-      projectId,
-      "error",
-      null,
+    await setGenerationStatus(
+      projectId, "error", null,
       err instanceof Error ? err.message : String(err)
     );
   }

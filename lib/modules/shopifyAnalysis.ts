@@ -4,11 +4,10 @@ import { loadPrompt } from "../prompts";
 import { evidenceToPromptBlock, createEvidence, getEvidenceForProject } from "../evidence";
 import { extractJson } from "../jsonExtract";
 import { ShopifyFinding } from "../types";
-import { saveArtifact } from "./artifacts";
+import { saveArtifact, getArtifact } from "./artifacts";
 import { listFilesForProject } from "../projects";
 import { parseCsvBuffer } from "../parsers/csv";
 import { parseXlsxBuffer } from "../parsers/xlsx";
-import { getArtifact } from "./artifacts";
 
 function num(v: unknown): number {
   if (typeof v === "number") return v;
@@ -31,12 +30,11 @@ function pick(row: Record<string, unknown>, candidates: string[]): unknown {
 export async function generateShopifyAnalysis(
   projectId: string
 ): Promise<{ findings: ShopifyFinding[]; computed: Record<string, unknown> } | null> {
-  const files = listFilesForProject(projectId).filter((f) => f.source_type === "shopify");
+  const allFiles = await listFilesForProject(projectId);
+  const files = allFiles.filter((f) => f.source_type === "shopify");
   if (files.length === 0) return null;
 
-  let netSales = 0;
-  let orders = 0;
-  let sessions = 0;
+  let netSales = 0, orders = 0, sessions = 0;
   const productRevenue: Record<string, number> = {};
 
   for (const file of files) {
@@ -45,42 +43,30 @@ export async function generateShopifyAnalysis(
       const result = file.ext === ".csv" ? parseCsvBuffer(buffer) : parseXlsxBuffer(buffer);
       for (const sheet of result.sheets) {
         for (const row of sheet.rows) {
-          const sales = num(pick(row, ["net sales", "total sales", "revenue"]));
-          netSales += sales;
+          netSales += num(pick(row, ["net sales", "total sales", "revenue"]));
           const orderIdValue = pick(row, ["order id"]);
           const ordersColumnValue = pick(row, ["orders"]);
           if (orderIdValue !== undefined) {
-            // Order-level export: each row represents one order.
             orders += 1;
           } else if (ordersColumnValue !== undefined) {
-            // Aggregated export with an explicit orders count column.
             orders += num(ordersColumnValue);
           }
           sessions += num(pick(row, ["sessions"]));
           const product = pick(row, ["product", "product title", "item"]);
           if (product) {
             const key = String(product);
-            productRevenue[key] = (productRevenue[key] ?? 0) + sales;
+            productRevenue[key] = (productRevenue[key] ?? 0) + num(pick(row, ["net sales", "total sales", "revenue"]));
           }
         }
       }
-    } catch {
-      // skip
-    }
+    } catch { /* skip */ }
   }
 
   const aov = orders > 0 ? netSales / orders : null;
   const cvr = sessions > 0 && orders > 0 ? (orders / sessions) * 100 : null;
 
-  // Tie to paid spend if the paid media module has already run for MER.
-  const paidArtifact = getArtifact<{ computed: { total_spend: number } }>(
-    projectId,
-    "paid_media_findings"
-  );
-  const mer =
-    paidArtifact && paidArtifact.computed.total_spend > 0
-      ? netSales / paidArtifact.computed.total_spend
-      : null;
+  const paidArtifact = await getArtifact<{ computed: { total_spend: number } }>(projectId, "paid_media_findings");
+  const mer = paidArtifact && paidArtifact.computed.total_spend > 0 ? netSales / paidArtifact.computed.total_spend : null;
 
   const topProducts = Object.entries(productRevenue)
     .sort((a, b) => b[1] - a[1])
@@ -89,15 +75,14 @@ export async function generateShopifyAnalysis(
 
   const computed = {
     net_sales: Math.round(netSales * 100) / 100,
-    orders,
-    sessions,
+    orders, sessions,
     aov: aov ? Math.round(aov * 100) / 100 : null,
     cvr_pct: cvr ? Math.round(cvr * 100) / 100 : null,
     mer: mer ? Math.round(mer * 100) / 100 : null,
     top_products: topProducts,
   };
 
-  createEvidence({
+  await createEvidence({
     project_id: projectId,
     source_file: files.map((f) => f.original_name).join(", "),
     source_type: "shopify",
@@ -108,16 +93,13 @@ export async function generateShopifyAnalysis(
     tags: ["computed", "shopify"],
   });
 
-  const evidence = getEvidenceForProject(projectId).filter((e) => e.source_type === "shopify");
+  const allEvidence = await getEvidenceForProject(projectId);
+  const evidence = allEvidence.filter((e) => e.source_type === "shopify");
   const system = loadPrompt("shopify_analysis");
-  const user = `Computed Shopify metrics:\n${JSON.stringify(
-    computed,
-    null,
-    2
-  )}\n\nSupporting evidence:\n${evidenceToPromptBlock(evidence)}\n\nProduce the Shopify findings JSON array now.`;
+  const user = `Computed Shopify metrics:\n${JSON.stringify(computed, null, 2)}\n\nSupporting evidence:\n${evidenceToPromptBlock(evidence)}\n\nProduce the Shopify findings JSON array now.`;
   const raw = await callLLM(system, user, { jsonMode: true, maxTokens: 2000 });
   const findings = extractJson<ShopifyFinding[]>(raw);
 
-  saveArtifact(projectId, "shopify_findings", { findings, computed });
+  await saveArtifact(projectId, "shopify_findings", { findings, computed });
   return { findings, computed };
 }

@@ -8,11 +8,11 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const project = getProject(id);
+  const project = await getProject(id);
   if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  const files = listFilesForProject(id);
-  const evidence = getEvidenceForProject(id);
-  const artifacts = getAllArtifacts(id);
+  const files = await listFilesForProject(id);
+  const evidence = await getEvidenceForProject(id);
+  const artifacts = await getAllArtifacts(id);
   return NextResponse.json({ project, files, evidence_count: evidence.length, artifacts });
 }
 
@@ -21,9 +21,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const project = getProject(id);
+  const project = await getProject(id);
   if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const body = await req.json();
-  updateProject(id, body);
-  return NextResponse.json({ project: getProject(id) });
+  await updateProject(id, body);
+  return NextResponse.json({ project: await getProject(id) });
 }

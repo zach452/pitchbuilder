@@ -6,7 +6,7 @@ export async function GET(
   { params }: { params: Promise<{ fileId: string }> }
 ) {
   const { fileId } = await params;
-  const file = getFile(fileId);
+  const file = await getFile(fileId);
   if (!file) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({ file });
 }

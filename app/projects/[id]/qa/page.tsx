@@ -10,9 +10,9 @@ export default async function QAPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const project = getProject(id);
+  const project = await getProject(id);
   if (!project) notFound();
-  const artifacts = getAllArtifacts(id);
+  const artifacts = await getAllArtifacts(id);
   const qa = artifacts.qa_items as QAItem[] | undefined;
 
   return (

@@ -7,11 +7,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const project = getProject(id);
+  const project = await getProject(id);
   if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
-  setGenerationStatus(id, "running", "starting");
-  // Fire and forget — UI polls GET /api/projects/[id] for generation_status.
+  await setGenerationStatus(id, "running", "starting");
   runFullPipeline(id).catch(() => {
     // errors are persisted to the project row inside runFullPipeline
   });
@@ -24,7 +23,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const project = getProject(id);
+  const project = await getProject(id);
   if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
   return NextResponse.json({
     generation_status: project.generation_status,

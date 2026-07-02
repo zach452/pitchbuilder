@@ -8,7 +8,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const files = listFilesForProject(id);
+  const files = await listFilesForProject(id);
   return NextResponse.json({ files });
 }
 
@@ -17,7 +17,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const project = getProject(id);
+  const project = await getProject(id);
   if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
   const formData = await req.formData();
@@ -38,17 +38,18 @@ export async function POST(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params: _params }: { params: Promise<{ id: string }> }
 ) {
-  await params;
   const body = await req.json();
-  if (!body.file_id || !body.source_type) {
-    return NextResponse.json({ error: "file_id and source_type required" }, { status: 400 });
+  if (!body.file_id) {
+    return NextResponse.json({ error: "file_id required" }, { status: 400 });
   }
   if (body.image_tags) {
-    updateFileImageTags(body.file_id, body.image_tags as ImageTags);
+    await updateFileImageTags(body.file_id, body.image_tags as ImageTags);
+  } else if (body.source_type) {
+    await updateFileSourceType(body.file_id, body.source_type as SourceType);
   } else {
-    updateFileSourceType(body.file_id, body.source_type as SourceType);
+    return NextResponse.json({ error: "source_type or image_tags required" }, { status: 400 });
   }
   return NextResponse.json({ ok: true });
 }

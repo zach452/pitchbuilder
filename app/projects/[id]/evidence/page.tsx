@@ -10,9 +10,9 @@ export default async function EvidencePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const project = getProject(id);
+  const project = await getProject(id);
   if (!project) notFound();
-  const evidence = getEvidenceForProject(id);
+  const evidence = await getEvidenceForProject(id);
 
   return (
     <div>

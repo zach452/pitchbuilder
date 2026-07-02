@@ -37,9 +37,9 @@ export default async function AnalysisPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const project = getProject(id);
+  const project = await getProject(id);
   if (!project) notFound();
-  const artifacts = getAllArtifacts(id);
+  const artifacts = await getAllArtifacts(id);
   const rfp = artifacts.rfp_summary as RfpSummary | undefined;
   const transcript = artifacts.transcript_summary as TranscriptSummary | undefined;
   const diagnosis = artifacts.business_diagnosis as BusinessDiagnosis | undefined;

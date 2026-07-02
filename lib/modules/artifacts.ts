@@ -1,38 +1,37 @@
 import { randomUUID } from "crypto";
-import { getDb } from "../db";
+import { getAdapter } from "../db";
 
-export function saveArtifact(projectId: string, module: string, content: unknown): void {
-  const db = getDb();
+export async function saveArtifact(projectId: string, module: string, content: unknown): Promise<void> {
+  const db = await getAdapter();
   const id = randomUUID();
   const now = new Date().toISOString();
   // Upsert by deleting any existing artifact for this module first (keep latest only).
-  db.prepare(`DELETE FROM generated_artifacts WHERE project_id = ? AND module = ?`).run(
-    projectId,
-    module
+  await db.run(
+    `DELETE FROM generated_artifacts WHERE project_id = $1 AND module = $2`,
+    [projectId, module]
   );
-  db.prepare(
-    `INSERT INTO generated_artifacts (id, project_id, module, content_json, created_at) VALUES (?, ?, ?, ?, ?)`
-  ).run(id, projectId, module, JSON.stringify(content), now);
+  await db.run(
+    `INSERT INTO generated_artifacts (id, project_id, module, content_json, created_at) VALUES ($1, $2, $3, $4, $5)`,
+    [id, projectId, module, JSON.stringify(content), now]
+  );
 }
 
-export function getArtifact<T = unknown>(projectId: string, module: string): T | null {
-  const db = getDb();
-  const row = db
-    .prepare(
-      `SELECT content_json FROM generated_artifacts WHERE project_id = ? AND module = ? ORDER BY created_at DESC LIMIT 1`
-    )
-    .get(projectId, module) as { content_json: string } | undefined;
-  if (!row) return null;
-  return JSON.parse(row.content_json) as T;
+export async function getArtifact<T = unknown>(projectId: string, module: string): Promise<T | null> {
+  const db = await getAdapter();
+  const rows = await db.query<{ content_json: string }>(
+    `SELECT content_json FROM generated_artifacts WHERE project_id = $1 AND module = $2 ORDER BY created_at DESC LIMIT 1`,
+    [projectId, module]
+  );
+  if (!rows[0]) return null;
+  return JSON.parse(rows[0].content_json) as T;
 }
 
-export function getAllArtifacts(projectId: string): Record<string, unknown> {
-  const db = getDb();
-  const rows = db
-    .prepare(
-      `SELECT module, content_json FROM generated_artifacts WHERE project_id = ?`
-    )
-    .all(projectId) as { module: string; content_json: string }[];
+export async function getAllArtifacts(projectId: string): Promise<Record<string, unknown>> {
+  const db = await getAdapter();
+  const rows = await db.query<{ module: string; content_json: string }>(
+    `SELECT module, content_json FROM generated_artifacts WHERE project_id = $1`,
+    [projectId]
+  );
   const result: Record<string, unknown> = {};
   for (const row of rows) {
     result[row.module] = JSON.parse(row.content_json);

@@ -4,7 +4,7 @@ import { PitchStage } from "@/lib/types";
 
 export async function GET() {
   try {
-    const projects = listProjects();
+    const projects = await listProjects();
     return NextResponse.json({ projects });
   } catch (err) {
     console.error("[GET /api/projects]", err);
@@ -16,12 +16,9 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     if (!body.name || !body.prospect_name) {
-      return NextResponse.json(
-        { error: "name and prospect_name are required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "name and prospect_name are required" }, { status: 400 });
     }
-    const project = createProject({
+    const project = await createProject({
       name: body.name,
       prospect_name: body.prospect_name,
       category: body.category,

@@ -11,10 +11,10 @@ export default async function RoadmapPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const project = getProject(id);
+  const project = await getProject(id);
   if (!project) notFound();
 
-  const artifacts = getAllArtifacts(id);
+  const artifacts = await getAllArtifacts(id);
   const rec = artifacts.recommendations as
     | { recommendations: Recommendation[]; roadmap: RoadmapItem[] }
     | undefined;

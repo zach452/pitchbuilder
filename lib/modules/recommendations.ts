@@ -7,16 +7,12 @@ import { saveArtifact, getAllArtifacts } from "./artifacts";
 export async function generateRecommendations(
   projectId: string
 ): Promise<{ recommendations: Recommendation[]; roadmap: RoadmapItem[] }> {
-  const artifacts = getAllArtifacts(projectId);
+  const artifacts = await getAllArtifacts(projectId);
   const system = loadPrompt("recommendations");
-  const user = `All prior module outputs:\n${JSON.stringify(artifacts, null, 2).slice(
-    0,
-    12000
-  )}\n\nProduce the recommendations JSON array now.`;
+  const user = `All prior module outputs:\n${JSON.stringify(artifacts, null, 2).slice(0, 12000)}\n\nProduce the recommendations JSON array now.`;
   const raw = await callLLM(system, user, { jsonMode: true, maxTokens: 2000 });
   const recommendations = extractJson<Recommendation[]>(raw);
 
-  // Build richer RoadmapItem objects from recommendations
   const roadmap: RoadmapItem[] = recommendations.map((r) => ({
     phase: r.timeframe as "30" | "60" | "90",
     recommendation: r.title,
@@ -29,6 +25,6 @@ export async function generateRecommendations(
     dependencies: "None identified",
   }));
 
-  saveArtifact(projectId, "recommendations", { recommendations, roadmap });
+  await saveArtifact(projectId, "recommendations", { recommendations, roadmap });
   return { recommendations, roadmap };
 }

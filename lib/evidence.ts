@@ -1,8 +1,8 @@
 import { randomUUID } from "crypto";
-import { getDb } from "./db";
+import { getAdapter } from "./db";
 import { Confidence, Evidence, SourceType } from "./types";
 
-export function createEvidence(input: {
+export async function createEvidence(input: {
   project_id: string;
   source_file: string;
   source_type: SourceType;
@@ -14,8 +14,8 @@ export function createEvidence(input: {
   date_range?: string | null;
   confidence?: Confidence;
   tags?: string[];
-}): Evidence {
-  const db = getDb();
+}): Promise<Evidence> {
+  const db = await getAdapter();
   const id = randomUUID();
   const now = new Date().toISOString();
   const row: Evidence = {
@@ -33,18 +33,24 @@ export function createEvidence(input: {
     tags: (input.tags ?? []).join(","),
     created_at: now,
   };
-  db.prepare(
+  await db.run(
     `INSERT INTO evidence (id, project_id, source_file, source_type, page_or_sheet, row_or_section, extracted_text, metric_name, metric_value, date_range, confidence, tags, created_at)
-     VALUES (@id, @project_id, @source_file, @source_type, @page_or_sheet, @row_or_section, @extracted_text, @metric_name, @metric_value, @date_range, @confidence, @tags, @created_at)`
-  ).run(row);
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+    [
+      row.id, row.project_id, row.source_file, row.source_type, row.page_or_sheet,
+      row.row_or_section, row.extracted_text, row.metric_name, row.metric_value,
+      row.date_range, row.confidence, row.tags, row.created_at,
+    ]
+  );
   return row;
 }
 
-export function getEvidenceForProject(projectId: string): Evidence[] {
-  const db = getDb();
-  return db
-    .prepare(`SELECT * FROM evidence WHERE project_id = ? ORDER BY created_at ASC`)
-    .all(projectId) as Evidence[];
+export async function getEvidenceForProject(projectId: string): Promise<Evidence[]> {
+  const db = await getAdapter();
+  return db.query<Evidence>(
+    `SELECT * FROM evidence WHERE project_id = $1 ORDER BY created_at ASC`,
+    [projectId]
+  );
 }
 
 export function evidenceToPromptBlock(evidence: Evidence[], limit = 200): string {

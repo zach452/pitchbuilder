@@ -7,9 +7,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const project = getProject(id);
+  const project = await getProject(id);
   if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  const markdown = buildMarkdownExport(project);
+  const markdown = await buildMarkdownExport(project);
   return new NextResponse(markdown, {
     headers: {
       "Content-Type": "text/markdown",

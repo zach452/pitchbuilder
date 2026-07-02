@@ -9,9 +9,9 @@ export default async function InputsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const project = getProject(id);
+  const project = await getProject(id);
   if (!project) notFound();
-  const files = listFilesForProject(id);
+  const files = await listFilesForProject(id);
 
   return (
     <div>
